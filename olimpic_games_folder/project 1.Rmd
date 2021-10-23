@@ -1,0 +1,153 @@
+---
+title: "Project №1"
+author: "Grigoreva Elena"
+date: "21.10.2021"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=F, message=FALSE, warning=FALSE}
+if (!require('dplyr')){
+  install.packages('dplyr')
+}
+```
+
+## 1. Uploading files
+
+We have several files with data, so some function to read all of the files and to combine them in one data frame is needed.  
+
+```{r, message=FALSE}
+combine.files <- function(path, extension, separ){
+  setwd(path)
+  files <- list.files(path = path, pattern = paste0('*.',extension), full.names = T)
+  df <- data.frame()
+  for (file in files){
+    data <- read.table(file, header = T, fill = T, sep = separ, quote = "\"", strip.white = T, row.names = NULL, na.strings = c("","NA"))
+    if (length(df)>0){
+      names(data) <- names(final_data)
+      }
+    final_data <- rbind(df, data)
+  }
+  return(final_data)
+}
+```
+
+Now we can upload files and create one data frame:
+
+```{r, message=FALSE, warning=FALSE}
+olymp_data <- combine.files('C:/Users/Legri/OneDrive/Рабочий стол/BIOINF/R/project_1_data', 'csv',',')
+```
+
+## 2. Working with data frame (EDA)
+
+The next step it typecasting and working with NAs.
+- For variable Sex I set labels "Female" instead of "F" and "Male" instead "M". Because F can be precised as false on the next steps.
+- For "Medal" variable I can suggest that NA means that the given sportsman didn't win the medal. So I set a level "None" for this factor instead of NA.   
+- For variables "Age", "Height" and "Weight" I replaced NAs to means because their range is not big. Another possible approach is to remove NAs, but in this case we have too much rows with NAs and if we delete them, our data frame will be too small.  
+- For character variables I removed rows with NAs cause we can't calculate mean for them and don't have an additional data from where we can take values.  
+There is another one way for working with NAs - tj make some model to predict values, but in our case it will be redundant
+
+```{r message=FALSE, warning=FALSE}
+olymp_data$Sex <- factor(olymp_data$Sex,labels = c("Female", "Male"))
+olymp_data$Medal[is.na(olymp_data$Medal)] <- "None"
+olymp_data$Medal <- as.factor(olymp_data$Medal)
+olymp_data$Season <- as.factor(olymp_data$Season)
+
+olymp_data$Age <- as.integer(replace(olymp_data$Age, is.na(olymp_data$Age), mean(olymp_data$Age, na.rm=T)))
+olymp_data$Height <- as.integer(replace(olymp_data$Height, is.na(olymp_data$Height), mean(olymp_data$Height, na.rm=T)))
+olymp_data$Weight <- as.integer(replace(olymp_data$Weight, is.na(olymp_data$Weight), mean(olymp_data$Weight, na.rm=T)))
+
+olymp_data <- na.omit(olymp_data)
+```
+
+## 3. Minimal age
+
+```{r echo=TRUE}
+youngest_1992 <- olymp_data %>% 
+  filter(Year==1992) %>% 
+  group_by(Sex) %>% 
+  summarise(age = min(Age))
+```
+ 
+The youngest woman, who took part in Olympiad in the 1992 was the age of `r youngest_1992[1, 2]`.  
+The youngest man, who took part in Olympiad in the 1992 was the age of `r youngest_1992[2, 2]`.
+
+## 4. Mean and standard deviation for variable Heigh
+
+Code to calculate mean and standard deviation for variable Height for each sex.
+
+```{r}
+heigh_stat <- olymp_data %>%
+ group_by(Sex) %>% 
+  summarise(mean = mean(Height), sd = sd(Height))
+```
+
+Mean height for women is `r heigh_stat$mean[1]` with standard deviation `r heigh_stat$sd[1]`.  
+Mean height for men is `r heigh_stat$mean[2]` with standard deviation `r heigh_stat$sd[2]`.
+
+## 5. Mean and standard deviation for variable Heigh for women in tennice in 2000
+
+```{r}
+female_tennice <- olymp_data %>% 
+  filter(Sex == 'Female') %>% 
+  filter(Year == 2000) %>%
+  summarise (mean = mean(Height), sd = sd(Height))
+
+```
+
+Mean height for woman in tennis in 2000 is `r round(female_tennice$mean, 1)` and standard deviation `r round(female_tennice$sd, 1)`.
+
+## 6. The most heavyweight sportsman
+
+```{r}
+heavyweihgt <- olymp_data %>% 
+  filter(Year == 2006) %>% 
+  filter(Height == max(Height)) %>% 
+  select (Sport)
+```
+
+The most heavyweight athlete takes part in `r heavyweihgt[1,1]`
+
+## 7. The amount of women's gold medals during the period 1980-2010 
+
+```{r}
+gold_medals_w <- olymp_data %>% 
+  filter (1980 <= Year || Year <= 2000) %>% 
+  filter (Sex == "Female") %>% 
+  filter(Medal == "Gold") %>% 
+  count()
+```
+
+During the period 1980 - 2000 women got the `r gold_medals_w` gold medals.
+
+## 8. John Aalberg
+
+```{r}
+jhon <- olymp_data %>% 
+  filter(Name == "John Aalberg")
+```
+
+## 9. Most abundant group
+
+## 10. Changes in number
+
+## 11. Top 3 countries for each medal type
+
+## 12. z-scaling for Height wariable
+
+## 13. min-max-scaling
+
+## 14. Height, weight and age 
+
+## 15. Have Team and medal some correlation
+
+## 16. *
+
+
+
