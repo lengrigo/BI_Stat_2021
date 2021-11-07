@@ -20,9 +20,9 @@ In this project we work with data about participants of the Olympic games during
 
 ### Structure of the work:
 All files with the analysis and with the data are in the folder **olympic_game_folder**.
-In the folder **/data_folder** you can find several files with the raw data (in /raw_data folder) and processed data frame.
+In the folder **/data_folder** you can find several files with the raw data (in /raw_data folder) and processed data frame in zip archive.
 In the folder **/report_folder** you can find *.html* document with the report and *.rmd* file with the code for all the tasks.
 
 You can reproduse all the analisys with the same data and all you need for thst is the folder **olympic_game_folder** with the same structure. To add new data put them in the folder **/data_folder/raw_data** and run the code in .rmd file. 
 
-Exact tasks are presented in the file "task.pdf". 
+Exact tasks are presented in the file *task.pdf*. 
