@@ -2,21 +2,21 @@ In this project we work with data about participants of the Olympic games during
 
 ### The dataset has the following features:
 
-*ID* – Unique number for each athlete
-*Name* – Athlete's name
-*Sex*– M or F
-*Age* – Integer
-*Height* – In centimeters
-*Weight* – In kilograms
-*Team* – Team name
-*NOC* – National Olympic Committee 3-letter code
-*Games* – Year and season
-*Year* – Integer
-*Season* – Summer or Winter
-*City* – Host city
-*Sport* – Sport
-*Event* – Event
-*Medal* – Gold, Silver, Bronze, or NA
+*ID* – Unique number for each athlete  
+*Name* – Athlete's name  
+*Sex*– M or F  
+*Age* – Integer  
+*Height* – In centimeters  
+*Weight* – In kilograms  
+*Team* – Team name  
+*NOC* – National Olympic Committee 3-letter code  
+*Games* – Year and season  
+*Year* – Integer  
+*Season* – Summer or Winter  
+*City* – Host city  
+*Sport* – Sport  
+*Event* – Event  
+*Medal* – Gold, Silver, Bronze, or NA  
 
 ### Structure of the work:
 All files with the analysis and with the data are in the folder **olympic_game_folder**.
