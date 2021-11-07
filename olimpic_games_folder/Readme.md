@@ -1,6 +1,6 @@
 In this project we work with data about participants of the Olympic games during the past 120 years. Data is presented as several files of .csv format. Tocreate one dataframe custom function was presented. 
 
-###The dataset has the following features:
+### The dataset has the following features:
 
 *ID* – Unique number for each athlete
 *Name* – Athlete's name
@@ -18,7 +18,7 @@ In this project we work with data about participants of the Olympic games during
 *Event* – Event
 *Medal* – Gold, Silver, Bronze, or NA
 
-###Structure of the work:
+### Structure of the work:
 All files with the analysis and with the data are in the folder **olympic_game_folder**.
 In the folder **./data_folder** you can find several files with the raw data (in ./raw_data folder) and processed data frame.
 In the folder **/report_folder** you can find *.html* document with the report and *.rmd* file with the code for all the tasks.
