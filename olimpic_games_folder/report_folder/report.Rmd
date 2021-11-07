@@ -1,0 +1,334 @@
+---
+title: "Project №1"
+author: "Grigoreva Elena"
+date: "21.10.2021"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=F, message=FALSE, warning=FALSE}
+if (!require('dplyr')){
+  install.packages('dplyr')
+}
+if (!require('ggplot2')){
+  install.packages('ggplot2')
+}
+if (!require('gridExtra')){
+  install.packages('gridExtra')
+}
+if (!require('knitr')){
+  install.packages('knitr')
+}
+```
+
+# Uploading files
+
+We have several files with data, so some function to read all of the files and to combine them in one data frame is needed.  
+
+```{r, message=FALSE}
+combine.files <- function(path, extension, separ){
+  setwd(path)
+  files <- list.files(pattern = paste0('.*',extension))
+  df <- data.frame()
+  for (file in files){
+    data <- read.table(file, header = T, fill = T, sep = separ, quote = "\"", strip.white = T, row.names = NULL, na.strings = c("","NA"))
+    if (length(df)>0){
+      names(data) <- names(df)
+    }
+    df <- rbind(df, data)
+  }
+  return(df)
+}
+```
+
+Now we can upload files and create one data frame.
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+olymp_data <- combine.files('../data_folder/raw_data', '.csv',',')
+```
+
+# Working with data frame (EDA)
+
+Let's look to the structure of our data frame:  
+```{r}
+glimpse(olymp_data)
+```
+  
+-  The variable *Sex* should be factor. Also I decided to set labels "Female" instead of "F" and "Male" instead of "M". Because F can be precised as false in the next steps. But this simple action return a mistake because there are more then two levels. It was found that in two rows this variable has value G. We can change it into "M" cause in the column "name" we can see male names. And after that we are able to make transformation into factor with two levels. 
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+#checking inappropriate values
+subset(olymp_data, olymp_data$Sex != "M" & olymp_data$Sex != "F")
+#changing values
+olymp_data$Sex <- replace(olymp_data$Sex, olymp_data$Sex == "G", "M" )
+#transform to factor and set labels
+olymp_data$Sex <- factor(olymp_data$Sex,labels = c("Female", "Male"))
+```
+  
+- For *Medal* variable I can suggest that NA values mean that the sportsman didn't win the medal. So I set a level "None" for this factor instead of NA and transformed it into factor too.   
+- For variables *Age*, *Height* and *Weight* I replaced NAs to means because their range is not so big. Another possible approach is to remove NAs, but in this case we have too much rows with NAs and if we delete them, our data frame will be too small.  
+- For character variables I removed rows with NAs. There are not a lot of rows with NAs, we can't calculate mean for them and don't have an additional data from where we can take values.
+  
+```{r message=FALSE, warning=FALSE, include=FALSE}
+olymp_data$Medal[is.na(olymp_data$Medal)] <- "None"
+olymp_data$Medal <- as.factor(olymp_data$Medal)
+olymp_data$Season <- as.factor(olymp_data$Season)
+
+olymp_data$Age <- as.integer(replace(olymp_data$Age, is.na(olymp_data$Age), mean(olymp_data$Age, na.rm=T)))
+olymp_data$Height <- as.integer(replace(olymp_data$Height, is.na(olymp_data$Height), mean(olymp_data$Height, na.rm=T)))
+olymp_data$Weight <- as.integer(replace(olymp_data$Weight, is.na(olymp_data$Weight), mean(olymp_data$Weight, na.rm=T)))
+
+olymp_data <- na.omit(olymp_data)
+```
+
+# Tasks  
+### 3. Minimal age
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+youngest_1992 <- olymp_data %>% 
+  filter(Year==1992) %>% 
+  group_by(Sex) %>% 
+  summarise(age = min(Age))
+```
+ 
+The youngest *woman*, who took part in Olympiad in the 1992 was the age of `r youngest_1992[1, 2]`.  
+The youngest *man*, who took part in Olympiad in the 1992 was the age of `r youngest_1992[2, 2]`.
+
+### 4. Mean and standard deviation for variable Heigh
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+heigh_stat <- olymp_data %>%
+ group_by(Sex) %>% 
+  summarise(mean = mean(Height), sd = sd(Height))
+```
+
+Mean height among *women* is `r round(heigh_stat$mean[1], digits = 2)` cm with standard deviation `r round(heigh_stat$sd[1], digits = 2)`.  
+Mean height among *men* is `r round(heigh_stat$mean[2], digits = 2)` cm with standard deviation `r round(heigh_stat$sd[2], digits = 2)`.
+
+### 5. Mean and standard deviation for variable Heigh for women in tennice in 2000
+```{r message=FALSE, warning=FALSE, include=FALSE}
+female_tennice <- olymp_data %>% 
+  filter(Sex == 'Female') %>% 
+  filter(Year == 2000) %>%
+  summarise (mean = mean(Height), sd = sd(Height))
+
+```
+
+Mean height for woman in tennis in 2000 is `r round(female_tennice$mean, 1)` cm and standard deviation `r round(female_tennice$sd, 1)`.
+
+### 6. The most heavyweight sportsman
+```{r message=FALSE, warning=FALSE, include=FALSE}
+heavyweihgt <- olymp_data %>% 
+  filter(Year == 2006) %>% 
+  filter(Height == max(Height)) %>% 
+  select (Sport)
+```
+
+The most heavyweight athlete takes part in **`r heavyweihgt[1,1]`** competition.
+
+### 7. The amount of women's gold medals during the period 1980-2010 
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+gold_medals_w <- olymp_data %>% 
+  filter (1980 <= Year || Year <= 2000) %>% 
+  filter (Sex == "Female") %>% 
+  filter(Medal == "Gold") %>% 
+  count()
+```
+
+During the period 1980 - 2000 women got `r gold_medals_w` gold medals.
+
+### 8. John Aalberg
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+first_name <- 'John'
+second_name <- 'Aalberg'
+john <- olymp_data %>% 
+  filter(grepl(first_name, Name)) %>% 
+  filter(grepl(second_name, Name)) %>% 
+  count()
+```
+The sportsman John Aalberg takes part in the Olympic games `r john[1,1]` times.
+
+### 9. Most abundant age group in 2008
+
+The most of the sportsmen on the Olympiad can be divided into next four groups:  
+  
+- from 15 to 25  
+- from 25 to 35  
+- from 35 to 45  
+- from 45 to 55    
+  
+```{r message=FALSE, warning=FALSE, include=FALSE}
+olymp_data <- olymp_data %>% mutate(Age_groups = 0)
+olymp_data$Age_groups[olymp_data$Age >= 15 & olymp_data$Age < 25] <-  1
+olymp_data$Age_groups[olymp_data$Age >= 25 & olymp_data$Age < 35] <-  2
+olymp_data$Age_groups[olymp_data$Age >= 35 & olymp_data$Age < 45] <-  3
+olymp_data$Age_groups[olymp_data$Age >= 45 & olymp_data$Age <= 55] <-  4
+olymp_data$Age_groups[olymp_data$Age >55 | olymp_data$Age < 15] <-  5
+olymp_data$Age_groups <- factor(olymp_data$Age_groups, labels= c(" from 15 to 25", " from 25 to 35", "from 35 to 45", "from 45 to 55", "out of four groups"))
+
+ages_2008 <- olymp_data %>% 
+  filter(Year == 2008) %>% 
+  filter(Age_groups != "out of four groups") %>% 
+  group_by(Age_groups) %>%
+  count()
+```
+In the Olympic games in 2008 most frequent age of the participants was `r ages_2008$Age_groups[ages_2008$n == max(ages_2008$n)]` - there were `r max(ages_2008$n)` people in this age group.  
+In the Olympic games in 2008 most frequent age of the participants was `r ages_2008$Age_groups[ages_2008$n == min(ages_2008$n)]` - there were `r min(ages_2008$n)` people in this age group
+
+
+### 10. How many new kinds of sports appear between 1994 and 2002
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+olymp_data$Sport <- as.factor(olymp_data$Sport)
+sports_1994 <- olymp_data %>% 
+  filter(Year == 1994) %>% 
+  group_by(Sport) %>% 
+  count()
+sports_2002 <- olymp_data %>% 
+  filter(Year == 2002) %>% 
+  group_by(Sport) %>% 
+  count()
+
+```
+
+In the Olympic games 1994  `r nrow(sports_1994)` kinds of sports were presented, and in the Olympic games 2002 - `r nrow(sports_2002)` kinds of sports. So between 1994 and 2002 `r nrow(sports_2002)-nrow(sports_1994)` new kinds of sports has appeared.
+
+### 11. Top 3 countries for each medal type in summer and winter
+
+As a name of the country we will use uniqe National Olympic Committee 3-letter code (NOC in table)
+```{r message=FALSE, warning=FALSE, include=FALSE}
+summer_medals <- olymp_data %>% 
+  filter(Medal != "None") %>% 
+  filter(Season == "Summer") %>%
+  select(NOC, Medal) %>%
+  group_by(Medal, NOC) %>% 
+  count() %>%
+  group_by(Medal) %>% 
+  arrange(-n) %>% 
+  slice(1:3) %>% 
+  mutate(Place = c(1,2,3))
+  
+  
+winter_medals <- olymp_data %>% 
+  filter(Medal != "None") %>% 
+  filter(Season == "Winter") %>% 
+  select(NOC, Medal) %>%
+  group_by(Medal, NOC) %>% 
+  count() %>% 
+  group_by(Medal) %>% 
+  arrange(-n) %>% 
+  slice(1:3) %>% 
+  mutate(Place = c(1,2,3))
+
+```
+
+Top 3 countries for gold medal in winter games and amount of recieved medals:
+`r kable(winter_medals[winter_medals$Medal == "Gold", c(2,3,4)], col.names = c('NOC', 'Amount of medal', 'Place in the top'))`
+Top 3 countries for silver medal in winter games and amount of recieved medals:
+`r kable(winter_medals[winter_medals$Medal == "Silver", c(2,3,4)], col.names = c('NOC', 'Amount of medal', 'Place in the top'))`
+Top 3 countries for bronze medal in winter games and amount of recieved medals:
+`r kable(winter_medals[winter_medals$Medal == "Bronze", c(2,3,4)], col.names = c('NOC', 'Amount of medal', 'Place in the top'))`  
+
+Top 3 countries for gold medal in summer games and amount of recieved medals:
+`r kable(summer_medals[summer_medals$Medal == "Gold", c(2,3,4)], col.names = c('NOC', 'Amount of medal', 'Place in the top'))`
+Top 3 countries for silver medal in summer games and amount of recieved medals:
+`r kable(summer_medals[summer_medals$Medal == "Silver", c(2,3,4)], col.names = c('NOC', 'Amount of medal', 'Place in the top'))`
+Top 3 countries for bronze medal in summer games and amount of recieved medals:
+`r kable(summer_medals[summer_medals$Medal == "Bronze", c(2,3,4)], col.names = c('NOC', 'Amount of medal', 'Place in the top'))`
+
+
+### 12. z-scaling for Height wariable
+To create z-scale for variable Height let's use function **scale()**:
+```{r}
+olymp_data <- olymp_data %>% 
+  mutate(Height_z_scores = scale(Height))
+```
+  
+### 13. Min-max scaling
+Min-max scaling scales variables in range 0 to 1. It allows to reduce the impact of outliers. To use this type of scaling we should subtract the maximum value from each sample value and divide the resulting number by the difference between the maximum and minimum values.
+```{r message=FALSE, warning=FALSE}
+olymp_data <- olymp_data %>% 
+  mutate(Height_min_max_scaled = (Height - min(Height)) / (max(Height) - min(Height)))
+```
+
+### 14. Height, weight and age 
+
+Now we should compare height, weight and age of men and women taking part in the Olympic games. But in our data we can see one person more than one time - they could take part in competition several times in different years.In the most cases height and weight did not change from one year to another, so to compare mean height and weight I made a subset where is for each sportsman only one raw.
+
+```{r}
+olymp_data_height_weight <- distinct(olymp_data, Name, .keep_all = TRUE)
+```
+
+For comparing the age we can use original data frame cause for each year ages are different.
+
+
+Before comparing the means we should check if these variables have a normal distribution. To do that let's make a density plots.  
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+height_density <- ggplot(olymp_data_height_weight, aes(x = Height, fill = Sex))+
+  geom_density(alpha = 0.5)+
+  theme_minimal()
+
+weight_density <- ggplot(olymp_data_height_weight, aes(x = Weight, fill = Sex))+
+  geom_density(alpha = 0.5)+
+  theme_minimal()
+
+age_density <- ggplot(olymp_data, aes(x = Age, fill = Sex))+
+  geom_density(alpha = 0.5)+
+  theme_minimal()
+
+grid.arrange(height_density, weight_density, age_density)
+```
+  
+Let's visualize how our means will look in box plots.  
+```{r echo=FALSE}
+height <- ggplot(olymp_data_height_weight, aes(Sex, Height))+
+  geom_boxplot()+
+  theme_minimal()
+
+weight <- ggplot(olymp_data_height_weight, aes(Sex, Weight))+
+  geom_boxplot()+
+  theme_minimal()
+
+age <- ggplot(olymp_data, aes(Sex, Age))+
+  geom_boxplot()+
+  theme_minimal()
+
+grid.arrange(height, weight, age, ncol = 3)
+```
+In the box-plots we can see that there are one value bigger than 200 in variable Age, so let's remove it.
+```{r message=FALSE, warning=FALSE, include=FALSE}
+olymp_data_height_weight <- olymp_data_height_weight %>% filter(Age < 100)
+```
+
+As we can see in the density plots and in the box plots - in our sampler distribution far from normal. But the amount of values is big - `r nrow(olymp_data[olymp_data$Sex == 'Male',])` men and `r nrow(olymp_data[olymp_data$Sex == 'Female',])`women. So we can use t-test for comparing the means.
+
+**T-test for height:**
+```{r echo=FALSE}
+height_test <- t.test(Height ~ Sex, olymp_data_height_weight)
+height_test
+```
+*During the comparing of height of men (`r nrow(olymp_data_height_weight[olymp_data_height_weight$Sex == 'Male',])` people) and women (`r nrow(olymp_data_height_weight[olymp_data_height_weight$Sex == 'Female',])` people) in the Olympiad t-test value is equal to `r height_test$statistic` with p-value `r ifelse(height_test$p.value < 0.05, '< 0.05', height_test$p.value)`. The mean height for men is `r round(height_test$estimate[1], digits = 2)` and for women is `r round(height_test$estimate[2], digits = 2)`. According these results we can say that there is statistically significant difference between height of men and women.*
+  
+**T-test for weight:**
+```{r echo=FALSE}
+weight_test <- t.test(Weight ~ Sex, olymp_data_height_weight)
+weight_test
+```
+*Comparing mean weight of `r nrow(olymp_data_height_weight[olymp_data_height_weight$Sex == 'Male',])` men and `r nrow(olymp_data_height_weight[olymp_data_height_weight$Sex == 'Female',])` who take part in the Olympiad we obtain the t-test value = `r weight_test$statistic` with p-value `r ifelse(weight_test$p.value < 0.05, '< 0.05', weight_test$p.value)`. Mean weight for men is `r round(weight_test$estimate[1], digits = 2)` and for women is `r round(weight_test$estimate[2], digits = 2)`. These results show the statistically significant difference between mean weight of men and women.*
+  
+**T-test for age:**
+```{r echo=FALSE}
+age_test <- t.test(Age ~ Sex, olymp_data)
+age_test
+```
+*We compare age of `r nrow(olymp_data[olymp_data$Sex == 'Male',])` men and `r nrow(olymp_data[olymp_data$Sex == 'Female',])` woman and the means ages for them were `r round(age_test$estimate[1], digits=1)` and `r round(age_test$estimate[2], digits = 1)`respectively. The t-value is `r age_test$statistic` with p-value `r ifelse(age_test$p.value < 0.05, '< 0.05', age_test$p.value)`. This results demonstrate that there is statistically significant difference between two groups.* 
+
+
