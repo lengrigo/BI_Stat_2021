@@ -1,0 +1,144 @@
+---
+title: "PCA-project"
+author: "Grigoreva Elena"
+date: "6 12 2021"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+library(dplyr)
+library(ggplot2)
+library(caTools)
+library(vegan)
+library(kernlab)
+```
+
+In this project we work with data about critical temperatures of superconductors.
+There are two files:  
+1) train.csv contains 81 features extracted from 21263 superconductors along with the critical temperature in the 82nd column,  
+2) unique_m.csv contains the chemical formula broken up for all the 21263 superconductors from the train.csv file. The last two columns have the critical temperature and chemical formula.
+
+Importing and combining data (I removed the column *critical_temp* from the second data set because it have duplicate in first data set. Also I won't take column *material* according to the task):
+```{r message=FALSE, warning=FALSE}
+train <- read.csv("../data/train.csv")
+unique_m <- read.csv("../data/unique_m.csv")%>% 
+  select(-critical_temp)
+superconductors_data <- cbind(train, unique_m) %>% 
+  select(-material)
+```
+  
+## Dividing the data into training and test samples:
+```{r message=FALSE, warning=FALSE}
+set.seed(101) 
+sample = sample.split(superconductors_data$critical_temp, SplitRatio = 0.8) 
+train_set = subset(superconductors_data, sample == TRUE) 
+test_set = subset(superconductors_data, sample == FALSE)
+
+```
+  
+## Data standardization:
+```{r message=FALSE, warning=FALSE}
+train_means <- train_set %>% 
+  summarise_all(mean)
+
+train_sd <- train_set %>% 
+  summarise_all(sd)
+
+train_scaled <- train_set
+test_scaled <- test_set
+
+
+for (name in colnames(train_set)){
+  if (train_sd[name][[1]] != 0){
+    train_scaled[name] <- (train_set[name] - train_means[name][[1]])/train_sd[name][[1]]
+    test_scaled[name] <- (test_set[name] - train_means[name][[1]])/train_sd[name][[1]]
+  } else {
+    train_scaled[name] <- 0
+    test_scaled[name] <- 0
+  }
+}
+
+```
+   
+### Linear model:
+```{r message=FALSE, warning=FALSE}
+full_linear_model <- lm(critical_temp ~ ., train_scaled)
+```
+In this model we got adjusted R-square equal to `r summary(full_linear_model)$r.squared`. 
+  
+## PCA:
+```{r message=FALSE, warning=FALSE}
+superconductors_pca <- rda(train_set[, -82], scale = TRUE)
+```
+
+Now we should transform our test data using coefficients from PCA of train sample but we have too much PCs and not all of them will be used for the further analysis, so I decided to transform test data after choosing principal components.  
+
+### Choosing amount of principal components:
+```{r message=FALSE, warning=FALSE}
+screeplot(superconductors_pca, type = "lines", bstick = TRUE)
+```
+  
+The plot shows that we can take 5 principal components for further analysis.  
+
+```{r message=FALSE, warning=FALSE}
+selected_components_coefficients <- as.data.frame(summary(superconductors_pca)$species[,1:5])
+```
+
+Transforming test data with coefficients from train sample:
+```{r}
+transformed_test_pca <- as.data.frame(as.matrix(test_scaled[,-82]) %*% as.matrix(selected_components_coefficients))
+
+transformed_train_pca <- as.data.frame(as.matrix(train_scaled[,-82]) %*% as.matrix(selected_components_coefficients))
+
+transformed_test_pca <- cbind(transformed_test_pca, test_set[82])
+transformed_train_pca <- cbind(transformed_train_pca, train_set[82])
+```
+
+### New linear model:
+```{r}
+post_pca_linmodel <- lm(critical_temp~., data=transformed_test_pca)
+summary(post_pca_linmodel)
+```
+
+Now R-squared is equal to `r summary(post_pca_linmodel)$r.squared`. New model didn't become better.
+
+## Kernel PCA:
+```{r eval=FALSE, include=FALSE}
+kernel_pca <- kpca(train_scaled[,-82])
+```
+
+```{r}
+# I saved result of kernel analysis from previous chunk and imported it. That makes creating html much easier.  
+
+kernel_pca_1 <- get(load("../data/kernel.RData"))
+```
+
+Data selection and transformation:
+```{r}
+selected_cmponents_kernel <- as.data.frame(pcv(kernel_pca_1))[1:5]
+
+transformed_test_kernel <- as.data.frame(as.matrix(test_scaled[,-82]) %*% as.matrix(selected_cmponents_kernel))
+
+transformed_test_kernel <- cbind(transformed_test_kernel, test_set[82])
+```
+
+### Linear modal with transformed data:
+```{r}
+linmodel_kernel <- lm(critical_temp~., data = transformed_test_kernel)
+summary(linmodel_kernel)
+```
+
+Now R-square is equal to `r summary(linmodel_kernel)$r.squared`. In this case, with only 5 components this method didn't make our model better.
+
+
+
+
+
+
